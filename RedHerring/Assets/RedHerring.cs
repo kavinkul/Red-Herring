@@ -14,13 +14,14 @@ public class RedHerring : MonoBehaviour {
     public Material[] Colors;
     public GameObject[] Status;
     KMAudio.KMAudioRef sound;
+    public GameObject[] NoiseMakers;
 
     static int moduleIdCounter = 1;
     int moduleId;
     private bool moduleSolved;
     bool active = false;
     int DistractionPicker = 0;
-    private List<string> Distractions = new List<string>{"Swan","Door1","Door2","Glass","DoubleOh","Needy"};
+    private List<string> Distractions = new List<string>{"Swan","Door1","Door2","Glass","DoubleOh","Needy","DiscordCall","DiscordJoin","DiscordLeave","FuckingNothing"};
     float Time = 0f;
     bool WindowofPress = false;
     bool Started = false;
@@ -34,11 +35,15 @@ public class RedHerring : MonoBehaviour {
     }
     void Start () {
       DistractionPicker = UnityEngine.Random.Range(0,Distractions.Count());
+      Status[0].SetActive(false);
+      Status[1].SetActive(false);
+      Status[2].SetActive(true);
 	}
 	void PressChungun () {
     Chungun.AddInteractionPunch();
     GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, Chungun.transform);
     if (TogglePress == false) {
+      Debug.LogFormat("[Red Herring #{0}] You have started the timer.", moduleId);
       TogglePress = true;
       StartCoroutine(StartThing());
       switch (DistractionPicker) {
@@ -59,6 +64,18 @@ public class RedHerring : MonoBehaviour {
         break;
         case 5:
         StartCoroutine(NeedyDistract());
+        break;
+        case 6:
+        StartCoroutine(Discord1());
+        break;
+        case 7:
+        StartCoroutine(Discord2());
+        break;
+        case 8:
+        StartCoroutine(Discord3());
+        break;
+        case 9:
+        return;
         break;
       }
     }
@@ -83,6 +100,7 @@ public class RedHerring : MonoBehaviour {
     }
   }
   IEnumerator StartThing(){
+    while (TogglePress == true) {
     Started = true;
     Time = UnityEngine.Random.Range(7f,15f);
     yield return new WaitForSeconds(Time);
@@ -92,26 +110,29 @@ public class RedHerring : MonoBehaviour {
     Chungus.GetComponent<MeshRenderer>().material = Colors[0];
     CanPress = false;
     Started = false;
-    TogglePress = false;
     if (moduleSolved == true) {
+      TogglePress = false;
       yield return null;
     }
     else {
+      TogglePress = false;
+      Debug.LogFormat("[Red Herring #{0}] You didn't press in time. Strike, slow poke.", moduleId);
       GetComponent<KMBombModule>().HandleStrike();
       yield return null;
     }
   }
+  }
   IEnumerator Door1Noise(){
     yield return new WaitForSeconds(Time - 1.5f);
-    Audio.PlaySoundAtTransform("Door1", transform);
+    Audio.PlaySoundAtTransform("Door1", NoiseMakers[0].transform);
   }
   IEnumerator Door2Noise(){
     yield return new WaitForSeconds(Time - 1.75f);
-    Audio.PlaySoundAtTransform("Door2", transform);
+    Audio.PlaySoundAtTransform("Door2", NoiseMakers[1].transform);
   }
   IEnumerator GlassNoise(){
     yield return new WaitForSeconds(Time - 1.25f);
-    Audio.PlaySoundAtTransform("Glass", transform);
+    Audio.PlaySoundAtTransform("Glass", NoiseMakers[0].transform);
   }
   IEnumerator NeedyDistract(){
     yield return new WaitForSeconds(Time - 4f);
@@ -121,6 +142,7 @@ public class RedHerring : MonoBehaviour {
     sound = null;
   }
   IEnumerator StrikeCoroutine(){
+    Debug.LogFormat("[Red Herring #{0}] You pressed too early. Strike, pin head.", moduleId);
     GetComponent<KMBombModule>().HandleStrike();
     TogglePress = false;
     Status[0].SetActive(true);
@@ -140,5 +162,17 @@ public class RedHerring : MonoBehaviour {
     yield return new WaitForSeconds(1f);
     Status[0].SetActive(false);
     Status[2].SetActive(true);
+  }
+  IEnumerator Discord1(){
+    yield return new WaitForSeconds(Time - 6f);
+    Audio.PlaySoundAtTransform("DiscordCall", transform);
+  }
+  IEnumerator Discord2(){
+    yield return new WaitForSeconds(Time - 2f);
+    Audio.PlaySoundAtTransform("DiscordJoin", transform);
+  }
+  IEnumerator Discord3(){
+    yield return new WaitForSeconds(Time - 2f);
+    Audio.PlaySoundAtTransform("DiscordLeave", transform);
   }
 }
