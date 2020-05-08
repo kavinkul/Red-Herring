@@ -21,19 +21,19 @@ public class RedHerring : MonoBehaviour
     static int moduleIdCounter = 1;
     int moduleId;
     private bool moduleSolved = false;
-	
+
     bool active = false;
     int DistractionPicker = 0;
     private List<string> Distractions = new List<string>{"Swan","Door1","Door2","Glass","DoubleOh","Needy","DiscordCall","DiscordJoin","DiscordLeave","FuckingNothing"};
     float Time = 0f;
 	float ActualTime;
-	
+
     bool WindowofPress = false;
     bool Started = false;
     bool Pressed = false;
     bool TogglePress = false;
     bool CanPress = false;
-	
+
 	#pragma warning disable 0649
     private bool TwitchPlaysActive;
     #pragma warning restore 0649
@@ -44,7 +44,7 @@ public class RedHerring : MonoBehaviour
 		GetComponent<KMBombModule>().OnActivate += RedHerringInTP;
         Chungun.OnInteract += delegate () { PressChungun(); return false; };
     }
-	
+
     void Start()
 	{
       DistractionPicker = UnityEngine.Random.Range(0,Distractions.Count());
@@ -52,12 +52,12 @@ public class RedHerring : MonoBehaviour
       Status[1].SetActive(false);
       Status[2].SetActive(true);
 	}
-	
+
 	void RedHerringInTP()
 	{
 		ActualTime = TwitchPlaysActive ? 5f : 0.5f;
 	}
-	
+
 	void PressChungun()
 	{
 		Chungun.AddInteractionPunch();
@@ -101,7 +101,7 @@ public class RedHerring : MonoBehaviour
 				break;
 			}
 		}
-		
+
 		else
 		{
 			if (CanPress == true)
@@ -112,14 +112,14 @@ public class RedHerring : MonoBehaviour
 				Status[1].SetActive(true);
 				moduleSolved = true;
 			}
-			
+
 			else
 			{
 				StartCoroutine(StrikeCoroutine());
 			}
 		}
 	}
-	
+
 	IEnumerator Swan()
 	{
 		yield return new WaitForSeconds(1.2f);
@@ -129,7 +129,7 @@ public class RedHerring : MonoBehaviour
 			Audio.PlaySoundAtTransform("Swan", transform);
 		}
 	}
-	
+
 	IEnumerator StartThing()
 	{
 		while (TogglePress == true)
@@ -148,7 +148,7 @@ public class RedHerring : MonoBehaviour
 				  TogglePress = false;
 				  yield return null;
 			}
-			
+
 			else
 			{
 			  TogglePress = false;
@@ -158,25 +158,25 @@ public class RedHerring : MonoBehaviour
 			}
 		}
 	}
-	
+
 	IEnumerator Door1Noise()
 	{
 		yield return new WaitForSeconds(Time - 1.5f);
 		Audio.PlaySoundAtTransform("Door1", NoiseMakers[0].transform);
 	}
-	
+
 	IEnumerator Door2Noise()
 	{
 		yield return new WaitForSeconds(Time - 1.75f);
 		Audio.PlaySoundAtTransform("Door2", NoiseMakers[1].transform);
 	}
-	
+
 	IEnumerator GlassNoise()
 	{
 		yield return new WaitForSeconds(Time - 1.25f);
 		Audio.PlaySoundAtTransform("Glass", NoiseMakers[0].transform);
 	}
-	
+
 	IEnumerator NeedyDistract()
 	{
 		yield return new WaitForSeconds(Time - 4f);
@@ -185,7 +185,7 @@ public class RedHerring : MonoBehaviour
 		sound.StopSound();
 		sound = null;
 	}
-	
+
 	IEnumerator StrikeCoroutine()
 	{
 		Debug.LogFormat("[Red Herring #{0}] You pressed too early. Strike, pin head.", moduleId);
@@ -200,7 +200,7 @@ public class RedHerring : MonoBehaviour
 		TogglePress = false;
 		StopAllCoroutines();
 	}
-	
+
 	IEnumerator DoubleOhStrikeTime()
 	{
 		yield return new WaitForSeconds(4f);
@@ -211,37 +211,45 @@ public class RedHerring : MonoBehaviour
 		Status[0].SetActive(false);
 		Status[2].SetActive(true);
 	}
-	
+
 	IEnumerator Discord1()
 	{
 		yield return new WaitForSeconds(Time - 6f);
 		Audio.PlaySoundAtTransform("DiscordCall", transform);
 	}
-	
+
 	IEnumerator Discord2()
 	{
 		yield return new WaitForSeconds(Time - 2f);
 		Audio.PlaySoundAtTransform("DiscordJoin", transform);
 	}
-	
+
 	IEnumerator Discord3()
 	{
 		yield return new WaitForSeconds(Time - 2f);
 		Audio.PlaySoundAtTransform("DiscordLeave", transform);
 	}
-	
+
 	//twitch plays
     #pragma warning disable 414
     private readonly string TwitchHelpMessage = @"To push the button in the module, do !{0} push. (You have to respond before 5 seconds passes after it changes color to avoid striking)";
     #pragma warning restore 414
-	
+
 	IEnumerator ProcessTwitchCommand(string command)
 	{
 		string[] parameters = command.Split(' ');
-		if (Regex.IsMatch(parameters[0], @"^\s*push\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+		if (Regex.IsMatch(parameters[0], @"^\s*push\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) || Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
 			yield return null;
 			Chungun.OnInteract();
+      if (DistractionPicker == 4) {
+        yield return new WaitForSeconds(4f);
+        yield return "sendtochat VoteNay Module {1} (Red Herring) got a strike! 6 points from MrPeanut1028 VoteNay";
+      }
+      while (CanPress == false) {
+        yield return new WaitForSeconds(0.1f);
+      }
+      yield return "sendtochat You can press the button!";
 		}
 	}
 }
