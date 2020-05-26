@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using KModkit;
+using RedHerringSL;
 
 public class RedHerring : MonoBehaviour
 {
@@ -13,10 +14,11 @@ public class RedHerring : MonoBehaviour
     public KMSelectable Chungun;
     public GameObject Chungus;
     public Material[] Colors;
-    public GameObject[] Status;
     KMAudio.KMAudioRef sound;
     public GameObject[] NoiseMakers;
-
+    public FakeStatusLight FakeStatusLight;
+    public Transform StatusLight;
+	
     private IDictionary<string, object> tpAPI;
 
     //Logging
@@ -50,9 +52,12 @@ public class RedHerring : MonoBehaviour
     void Start()
 	{
       DistractionPicker = UnityEngine.Random.Range(0,Distractions.Count());
-      Status[0].SetActive(false);
-      Status[1].SetActive(false);
-      Status[2].SetActive(true);
+	  FakeStatusLight = Instantiate(FakeStatusLight);
+      FakeStatusLight.transform.SetParent(transform, false);
+      if (GetComponent<KMBombModule>() != null)
+        FakeStatusLight.Module = GetComponent<KMBombModule>();
+	  FakeStatusLight.GetStatusLights(StatusLight);
+      FakeStatusLight.SetInActive();
 	}
 
 	void RedHerringInTP()
@@ -61,7 +66,11 @@ public class RedHerring : MonoBehaviour
         if (TwitchPlaysActive)
         {
             GameObject tpAPIGameObject = GameObject.Find("TwitchPlays_Info");
-            tpAPI = tpAPIGameObject.GetComponent<IDictionary<string, object>>();
+            //To make the module can be tested in test harness, check if the gameObject exists.
+            if (tpAPIGameObject != null)
+                tpAPI = tpAPIGameObject.GetComponent<IDictionary<string, object>>();
+            else
+                TwitchPlaysActive = false;
         }
     }
 
@@ -113,20 +122,28 @@ public class RedHerring : MonoBehaviour
 		{
 			if (CanPress == true)
 			{
-				GetComponent<KMBombModule>().HandlePass();
+				FakeStatusLight.HandlePass(StatusLightState.Green);
 				Chungus.GetComponent<MeshRenderer>().material = Colors[1];
-				Status[2].SetActive(false);
-				Status[1].SetActive(true);
 				moduleSolved = true;
 			}
 
 			else
 			{
-				StartCoroutine(StrikeCoroutine());
+				Strike();
 			}
 		}
 	}
 
+	void Strike()
+	{
+		Debug.LogFormat("[Red Herring #{0}] You pressed too early. Strike, pin head.", moduleId);
+		FakeStatusLight.HandleStrike();
+		TogglePress = false;
+		DistractionPicker = UnityEngine.Random.Range(0,Distractions.Count());
+		TogglePress = false;
+		StopAllCoroutines();
+	}
+	
 	IEnumerator Swan()
 	{
 		yield return new WaitForSeconds(1.2f);
@@ -197,34 +214,15 @@ public class RedHerring : MonoBehaviour
 		sound = null;
 	}
 
-	IEnumerator StrikeCoroutine()
-	{
-		Debug.LogFormat("[Red Herring #{0}] You pressed too early. Strike, pin head.", moduleId);
-		GetComponent<KMBombModule>().HandleStrike();
-		TogglePress = false;
-		Status[0].SetActive(true);
-		Status[2].SetActive(false);
-		yield return new WaitForSeconds(1f);
-		Status[0].SetActive(false);
-		Status[2].SetActive(true);
-		DistractionPicker = UnityEngine.Random.Range(0,Distractions.Count());
-		TogglePress = false;
-		StopAllCoroutines();
-	}
-
 	IEnumerator DoubleOhStrikeTime()
 	{
 		yield return new WaitForSeconds(4f);
 		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.Strike, Chungun.transform);
-		Status[0].SetActive(true);
-		Status[2].SetActive(false);
+		FakeStatusLight.FlashStrike();
         if (TwitchPlaysActive)
         {
             tpAPI["ircConnectionSendMessage"] = "VoteNay Module "+GetModuleCode()+" (Red Herring) got a strike! -6 points from MrPeanut1028 VoteNay!";
         }
-        yield return new WaitForSeconds(1f);
-		Status[0].SetActive(false);
-		Status[2].SetActive(true);
 	}
 
 	IEnumerator Discord1()
