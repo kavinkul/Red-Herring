@@ -17,7 +17,9 @@ public class RedHerring : MonoBehaviour
     KMAudio.KMAudioRef sound;
     public GameObject[] NoiseMakers;
 
-	//Logging
+    private IDictionary<string, object> tpAPI;
+
+    //Logging
     static int moduleIdCounter = 1;
     int moduleId;
     private bool moduleSolved = false;
@@ -56,7 +58,12 @@ public class RedHerring : MonoBehaviour
 	void RedHerringInTP()
 	{
 		ActualTime = TwitchPlaysActive ? 5f : 0.5f;
-	}
+        if (TwitchPlaysActive)
+        {
+            GameObject tpAPIGameObject = GameObject.Find("TwitchPlays_Info");
+            tpAPI = tpAPIGameObject.GetComponent<IDictionary<string, object>>();
+        }
+    }
 
 	void PressChungun()
 	{
@@ -139,6 +146,10 @@ public class RedHerring : MonoBehaviour
 			yield return new WaitForSeconds(Time);
 			Chungus.GetComponent<MeshRenderer>().material = Colors[1];
 			CanPress = true;
+            if (TwitchPlaysActive)
+            {
+                tpAPI["ircConnectionSendMessage"] = "The button has changed color on Module "+GetModuleCode()+" (Red Herring)!";
+            }
 			yield return new WaitForSeconds(ActualTime);
 			Chungus.GetComponent<MeshRenderer>().material = Colors[0];
 			CanPress = false;
@@ -207,7 +218,11 @@ public class RedHerring : MonoBehaviour
 		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.Strike, Chungun.transform);
 		Status[0].SetActive(true);
 		Status[2].SetActive(false);
-		yield return new WaitForSeconds(1f);
+        if (TwitchPlaysActive)
+        {
+            tpAPI["ircConnectionSendMessage"] = "VoteNay Module "+GetModuleCode()+" (Red Herring) got a strike! -6 points from MrPeanut1028 VoteNay!";
+        }
+        yield return new WaitForSeconds(1f);
 		Status[0].SetActive(false);
 		Status[2].SetActive(true);
 	}
@@ -237,19 +252,41 @@ public class RedHerring : MonoBehaviour
 
 	IEnumerator ProcessTwitchCommand(string command)
 	{
-		string[] parameters = command.Split(' ');
-		if (Regex.IsMatch(parameters[0], @"^\s*push\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) || Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+		if (Regex.IsMatch(command, @"^\s*push\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) || Regex.IsMatch(command, @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
 			yield return null;
 			Chungun.OnInteract();
-      if (DistractionPicker == 4) {
-        yield return new WaitForSeconds(4f);
-        yield return "sendtochat VoteNay Module {1} (Red Herring) got a strike! 6 points from MrPeanut1028 VoteNay";
-      }
-      while (CanPress == false) {
-        yield return new WaitForSeconds(0.1f);
-      }
-      yield return "sendtochat You can press the button!";
+            yield break;
 		}
 	}
+
+    IEnumerator TwitchHandleForcedSolve()
+    {
+        if (!TogglePress)
+        {
+            Chungun.OnInteract();
+        }
+        while (!CanPress)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+        Chungun.OnInteract();
+    }
+
+    private string GetModuleCode()
+    {
+        Transform closest = null;
+        float closestDistance = float.MaxValue;
+        foreach (Transform children in transform.parent)
+        {
+            var distance = (transform.position - children.position).magnitude;
+            if (children.gameObject.name == "TwitchModule(Clone)" && (closest == null || distance < closestDistance))
+            {
+                closest = children;
+                closestDistance = distance;
+            }
+        }
+
+        return closest != null ? closest.Find("MultiDeckerUI").Find("IDText").GetComponent<UnityEngine.UI.Text>().text : null;
+    }
 }
